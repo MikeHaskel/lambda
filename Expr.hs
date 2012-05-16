@@ -1,4 +1,7 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Expr where
+import qualified Data.Set as Set
+import Data.Set (Set)
 
 data Expr a =
   Leaf !a
@@ -29,3 +32,26 @@ instance Eq a => Eq (Expr a) where
     go (Leaf a) (Leaf a') = a == a'
     go (Apply f m) (Apply f' m') = go f f' && m == m'
     go (Lambda _ e) (Lambda _ e') = e == e'
+
+instance Show (Expr String) where
+  -- maintain a set of already bound variables to avoid masking
+  showsPrec _ = showsAbstr Set.empty where
+    showsAbstr ctx (Lambda x e) =
+      let x' = freshen ctx x in
+      let ctx' = Set.insert x' ctx in
+      ("fun "++) .
+      (x'++) .
+      (" -> "++) .
+      showsAbstr ctx' (e >>= maybe (return x') return)
+    showsAbstr ctx e = showsAppl ctx e
+    
+    showsAppl ctx (Apply f m) =
+      showsAppl ctx f .
+      (' ':) .
+      showsAtom ctx m
+    showsAppl ctx e = showsAtom ctx e
+    
+    showsAtom ctx (Leaf x) = (x++)
+    showsAtom ctx e = ('(':) . showsAbstr ctx e . (')':)
+
+    freshen ctx = head . filter (flip Set.notMember ctx) . iterate (++"'")
