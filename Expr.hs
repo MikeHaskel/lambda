@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
 module Expr where
 import qualified Data.Set as Set
 import Data.Set (Set)
@@ -33,25 +32,18 @@ instance Eq a => Eq (Expr a) where
     go (Apply f m) (Apply f' m') = go f f' && m == m'
     go (Lambda _ e) (Lambda _ e') = e == e'
 
-instance Show (Expr String) where
+instance Show a => Show (Expr a) where
   -- maintain a set of already bound variables to avoid masking
-  showsPrec _ = showsAbstr Set.empty where
-    showsAbstr ctx (Lambda x e) =
-      let x' = freshen ctx x in
+  -- furthermore, generalize to allow free variables internally
+  -- (Left is a free variable, Right is a primitive)
+  showsPrec = \d e -> go Set.empty d (fmap Right e) where
+    go ctx d (Leaf (Left x)) | d <= 12 = (x++)
+    go ctx d (Leaf (Right a)) = showsPrec d a
+    go ctx d (Apply f m) | d <= 11 =
+      go ctx 11 f . (' ':) . go ctx 12 m
+    go ctx d (Lambda x e) | d <= 10 =
+      let x' = head $ filter (flip Set.notMember ctx) $ iterate (++"'") x in
       let ctx' = Set.insert x' ctx in
-      ("fun "++) .
-      (x'++) .
-      (" -> "++) .
-      showsAbstr ctx' (e >>= maybe (return x') return)
-    showsAbstr ctx e = showsAppl ctx e
-    
-    showsAppl ctx (Apply f m) =
-      showsAppl ctx f .
-      (' ':) .
-      showsAtom ctx m
-    showsAppl ctx e = showsAtom ctx e
-    
-    showsAtom ctx (Leaf x) = (x++)
-    showsAtom ctx e = ('(':) . showsAbstr ctx e . (')':)
-
-    freshen ctx = head . filter (flip Set.notMember ctx) . iterate (++"'")
+      let e' = fmap (maybe (Left x') id) e in
+      ("fun "++) . (x'++) . (" -> "++) . go ctx' 0 e'
+    go ctx d e | d <= 12 = ('(':) . go ctx 0 e . (')':)
