@@ -17,3 +17,9 @@ instance Monad Expr where
   Lambda x e >>= f = Lambda x (e >>= f') where
     f' Nothing = Leaf Nothing
     f' (Just a) = fmap Just $ f a
+
+whnf :: Expr a -> Expr a
+whnf (Apply f m) = case whnf f of
+  Lambda _ e -> whnf $ e >>= maybe (whnf m) return
+  f -> Apply f m
+whnf e = e
