@@ -16,5 +16,5 @@ run (Leaf a) = a
 run (Apply f m) = rapply (run f) (run m)
 run (Lambda _ e) = RFun $ \x -> run $ fmap (maybe x id) e
 
-run_ :: Expr a -> Runtime a
-run_ = run . fmap RLeaf
+run' :: Expr a -> Runtime a
+run' = run . fmap RLeaf
