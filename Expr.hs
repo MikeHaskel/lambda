@@ -55,9 +55,10 @@ whnf e = e
 
 instance Eq a => Eq (Expr a) where
   (==) = \e e' -> go (whnf e) (whnf e') where
-    go (Leaf a) (Leaf a') = a == a'
-    go (Apply f m) (Apply f' m') = go f f' && m == m'
-    go (Lambda _ e) (Lambda _ e') = e == e'
+    go (Leaf a) (Leaf a') | a == a' = True
+    go (Apply f m) (Apply f' m') | go f f' && m == m' = True
+    go (Lambda _ e) (Lambda _ e') | e == e' = True
+    go _ _ = False
 
 instance Show a => Show (Expr a) where
   -- maintain a set of already bound variables to avoid masking
